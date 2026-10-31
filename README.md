@@ -1,4 +1,4 @@
-# IP12-ABB-AI-intergrated-project
+# IP12-ABB-Data-Automation-project
 
 ABB robot palletising with AI perception (HSRW IP12).
 

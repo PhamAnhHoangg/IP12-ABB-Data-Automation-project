@@ -29,8 +29,8 @@ automation/
 2. Clone this repo to the E: drive:
    ```powershell
    cd E:\
-   git clone https://github.com/PhamAnhHoangg/IP12-ABB-AI-integrated-project.git
-   cd E:\IP12-ABB-AI-integrated-project\automation
+   git clone https://github.com/PhamAnhHoangg/IP12-ABB-Data-Automation-project.git
+   cd E:\IP12-ABB-Data-Automation-project\automation
    copy .env.example .env
    ```
 3. Open `.env` and change `POSTGRES_PASSWORD`.
@@ -83,7 +83,7 @@ WP1 can copy `send_detections()` from `scripts/send_test_detection.py` into the 
    - Changelog: `Week | Date | Hash | Type | ID | Message | Owner`
    - Format the **ID** column as *Plain text*.
 2. Import `workflows/weekly-wp-commit.json`, paste the sheet URL into the 4 Sheets nodes, connect Google.
-3. In **GitHub Commits**, set `OWNER/REPO` to `PhamAnhHoangg/IP12-ABB-AI-integrated-project`.
+3. In **GitHub Commits**, set `OWNER/REPO` to `PhamAnhHoangg/IP12-ABB-Data-Automation-project`.
 4. Click **Run manually**. The first run logs "Initial commit: WP baseline".
 
 ## Roadmap
