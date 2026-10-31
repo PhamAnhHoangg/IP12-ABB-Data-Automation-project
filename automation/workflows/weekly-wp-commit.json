@@ -1,0 +1,357 @@
+{
+  "name": "IP12 – Weekly WP Commit Log",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Every Friday 17:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                5
+              ],
+              "triggerAtHour": 17
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "2",
+      "name": "Run manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "3",
+      "name": "Read Tasks",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        240,
+        100
+      ],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "PASTE_YOUR_GOOGLE_SHEET_URL"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Tasks"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "4",
+      "name": "Read Snapshot",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        100
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "PASTE_YOUR_GOOGLE_SHEET_URL"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Snapshot"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5",
+      "name": "GitHub Commits",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        100
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "url": "https://api.github.com/repos/OWNER/REPO/commits",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "since",
+              "value": "={{ $now.minus({days: 7}).toISO() }}"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "6",
+      "name": "Build Weekly Commit",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        100
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// ===== IP12 weekly WP diff → git-commit-style changelog =====\nconst norm = v => String(v ?? '').trim();\nconst tasks = $('Read Tasks').all().map(i => i.json).filter(r => norm(r.ID));\nconst snap  = $('Read Snapshot').all().map(i => i.json).filter(r => norm(r.ID));\nlet commits = [];\ntry { commits = $('GitHub Commits').all().map(i => i.json).filter(c => c && c.sha); } catch (e) {}\n\nconst now  = $now.setZone('Europe/Berlin');\nconst week = now.weekNumber;\nconst date = now.toFormat('yyyy-MM-dd');\nconst prev = Object.fromEntries(snap.map(r => [norm(r.ID), r]));\nconst isFirstRun = snap.length === 0;\n\nconst changes = [];\nconst add = (type, t, msg) => changes.push({ type, id: norm(t.ID), owner: norm(t.Owner), msg });\nconst seen = new Set();\n\nfor (const t of tasks) {\n  const id = norm(t.ID);\n  seen.add(id);\n  const p = prev[id];\n  if (!p || norm(p.Status) === 'Removed') {\n    add('feat', t, `add \"${norm(t.Task)}\"${norm(t.Owner) ? ` [${norm(t.Owner)}]` : ''}`);\n    continue;\n  }\n  const ps = norm(p.Status), ns = norm(t.Status);\n  if (ps !== ns) {\n    const done = /^(done|completed|finished|erledigt)$/i.test(ns);\n    add(done ? 'done' : 'progress', t, done ? `complete \"${norm(t.Task)}\" (${ps || '—'} → ${ns})` : `${ps || '—'} → ${ns}`);\n  }\n  if (norm(p.Owner) !== norm(t.Owner)) add('reassign', t, `owner ${norm(p.Owner) || '—'} → ${norm(t.Owner) || '—'}`);\n  for (const f of ['Task', 'Deliverable', 'Dependency']) {\n    if (norm(p[f]) !== norm(t[f])) add('refactor', t, `${f.toLowerCase()}: \"${norm(p[f]) || '—'}\" → \"${norm(t[f]) || '—'}\"`);\n  }\n  if (norm(p.Note) !== norm(t.Note) && norm(t.Note)) add('docs', t, `note: ${norm(t.Note)}`);\n}\nfor (const [id, p] of Object.entries(prev)) {\n  if (!seen.has(id) && norm(p.Status) !== 'Removed') add('remove', p, `drop \"${norm(p.Task)}\"`);\n}\n\n// short \"commit hash\"\nlet h = 0;\nfor (const ch of JSON.stringify(changes) + date) h = (h * 31 + ch.charCodeAt(0)) >>> 0;\nconst hash = h.toString(16).padStart(8, '0').slice(0, 7);\n\n// stats like \"3 files changed\"\nconst count = {};\nfor (const c of changes) count[c.type] = (count[c.type] || 0) + 1;\nconst statLine = changes.length\n  ? `${changes.length} change(s): ` + Object.entries(count).map(([k, v]) => `${v} ${k}`).join(', ')\n  : 'no task changes this week';\nconst statusCount = {};\nfor (const t of tasks) { const s = norm(t.Status) || 'No status'; statusCount[s] = (statusCount[s] || 0) + 1; }\nconst statusLine = Object.entries(statusCount).map(([k, v]) => `${k} ${v}`).join(' · ');\n\nconst title = isFirstRun ? 'Initial commit: WP baseline' : `Weekly WP update (KW ${week})`;\nconst order = ['feat', 'done', 'progress', 'reassign', 'refactor', 'docs', 'remove'];\nconst sorted = [...changes].sort((a, b) => order.indexOf(a.type) - order.indexOf(b.type) || a.id.localeCompare(b.id, undefined, { numeric: true }));\n\nlet report = `commit ${hash}  (KW ${week})\\nAuthor: IP12 WP Bot\\nDate:   ${now.toFormat('ccc dd LLL yyyy HH:mm')}\\n\\n    ${title}\\n\\n`;\nreport += sorted.length ? sorted.map(c => `    ${c.type}(${c.id}): ${c.msg}`).join('\\n') : '    chore: no task changes this week';\nreport += `\\n\\n ${statLine}\\n Board: ${statusLine}\\n`;\n\nif (commits.length) {\n  const authors = new Set(commits.map(c => c.commit?.author?.name || c.author?.login || '?'));\n  report += `\\n GitHub: ${commits.length} commit(s) by ${authors.size} author(s)\\n`;\n  report += commits.slice(0, 30).map(c =>\n    `    ${c.sha.slice(0, 7)} ${(c.commit?.author?.name || c.author?.login || '?')}: ${(c.commit?.message || '').split('\\n')[0]}`\n  ).join('\\n') + '\\n';\n} else {\n  report += `\\n GitHub: no commits this week (or repo not connected)\\n`;\n}\n\nconst changelogRows = (sorted.length ? sorted : [{ type: 'chore', id: '-', owner: '', msg: 'no task changes this week' }])\n  .map(c => ({ Week: `KW ${week}`, Date: date, Hash: hash, Type: c.type, ID: c.id, Message: c.msg, Owner: c.owner }));\n\nconst cols = ['WP', 'ID', 'Task', 'Owner', 'Deliverable', 'Dependency', 'Status', 'Note'];\nconst pick = r => Object.fromEntries(cols.map(k => [k, norm(r[k])]));\nconst snapshotRows = tasks.map(pick);\nfor (const [id, p] of Object.entries(prev)) if (!seen.has(id)) snapshotRows.push({ ...pick(p), Status: 'Removed' });\n\nreturn [{ json: { week, date, hash, subject: `[IP12] ${title} – ${hash}`, report, changelogRows, snapshotRows } }];\n"
+      }
+    },
+    {
+      "id": "7",
+      "name": "Split Changelog",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        -80
+      ],
+      "parameters": {
+        "fieldToSplitOut": "changelogRows",
+        "options": {}
+      }
+    },
+    {
+      "id": "8",
+      "name": "Append Changelog",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1440,
+        -80
+      ],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "PASTE_YOUR_GOOGLE_SHEET_URL"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Changelog"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "9",
+      "name": "Split Snapshot",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        100
+      ],
+      "parameters": {
+        "fieldToSplitOut": "snapshotRows",
+        "options": {}
+      }
+    },
+    {
+      "id": "10",
+      "name": "Update Snapshot",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1440,
+        100
+      ],
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "PASTE_YOUR_GOOGLE_SHEET_URL"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Snapshot"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": []
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "11",
+      "name": "Email Weekly Commit",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1200,
+        280
+      ],
+      "disabled": true,
+      "parameters": {
+        "sendTo": "you@example.com",
+        "subject": "={{ $json.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.report }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Every Friday 17:00": {
+      "main": [
+        [
+          {
+            "node": "Read Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run manually": {
+      "main": [
+        [
+          {
+            "node": "Read Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Tasks": {
+      "main": [
+        [
+          {
+            "node": "Read Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Snapshot": {
+      "main": [
+        [
+          {
+            "node": "GitHub Commits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub Commits": {
+      "main": [
+        [
+          {
+            "node": "Build Weekly Commit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Weekly Commit": {
+      "main": [
+        [
+          {
+            "node": "Split Changelog",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Split Snapshot",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Email Weekly Commit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Changelog": {
+      "main": [
+        [
+          {
+            "node": "Append Changelog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Snapshot": {
+      "main": [
+        [
+          {
+            "node": "Update Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/Berlin",
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

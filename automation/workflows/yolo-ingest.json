@@ -1,0 +1,105 @@
+{
+  "name": "IP12 – YOLO Ingest (v0.1)",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "YOLO Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "ip12-yolo",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ip12/yolo",
+        "responseMode": "lastNode",
+        "responseData": "allEntries",
+        "options": {}
+      }
+    },
+    {
+      "id": "2",
+      "name": "Validate Detections",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Accepts one detection or a batch: { \"detections\": [ ... ] }\n// Rejects bad rows instead of crashing the workflow.\nconst body = $input.first().json.body ?? $input.first().json;\nconst list = Array.isArray(body.detections) ? body.detections : [body];\nconst num = v => (v === undefined || v === null || v === '') ? null : Number(v);\n\nconst ok = [], bad = [];\nfor (const d of list) {\n  const conf = num(d.confidence);\n  const errors = [];\n  if (!d.class) errors.push('class missing');\n  if (conf === null || isNaN(conf) || conf < 0 || conf > 1) errors.push('confidence must be 0..1');\n  if (errors.length) { bad.push({ input: d, errors }); continue; }\n  ok.push({\n    run_code: d.run_code ?? body.run_code ?? null,\n    frame_id: num(d.frame_id),\n    box_id: d.box_id ?? null,\n    class: String(d.class),\n    confidence: conf,\n    x: num(d.x), y: num(d.y), w: num(d.w), h: num(d.h),\n    model_version: d.model_version ?? body.model_version ?? 'unknown',\n  });\n}\nif (!ok.length) throw new Error('No valid detections: ' + JSON.stringify(bad));\n// keep rejected rows visible in the execution log\nif (bad.length) console.log('Rejected rows:', JSON.stringify(bad));\nreturn ok.map(row => ({ json: row }));\n"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Insert into detections",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "operation": "insert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "name",
+          "value": "detections"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {
+          "outputColumns": [
+            "id",
+            "run_code",
+            "box_id",
+            "class",
+            "confidence",
+            "model_version"
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "YOLO Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Detections",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Detections": {
+      "main": [
+        [
+          {
+            "node": "Insert into detections",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/Berlin",
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
