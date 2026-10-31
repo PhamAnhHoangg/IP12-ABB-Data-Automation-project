@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
       POSTGRES_DB: ${POSTGRES_DB:-ip12}
     ports:
-      - "5432:5432"
+      - "5433:5432"   # 5433 on your laptop, so it does not clash with other Postgres containers
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
       - ./sql:/docker-entrypoint-initdb.d:ro
