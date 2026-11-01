@@ -94,3 +94,7 @@ WP1 can copy `send_detections()` from `scripts/send_test_detection.py` into the 
 - [ ] Weekly AI stats report
 - [ ] Missing-update reminder email
 - [ ] Weekly WP log also saved to `wp_changelog`
+
+## Connecting the real ZED + YOLO script
+
+Copy `scripts/n8n_reporter.py` next to the camera script. It sends detections in the background (batches every 2 s), so the camera loop is not slowed down. If n8n is offline, data is saved to `n8n_unsent.jsonl` and can be re-sent later. Usage is in the top of the file.
