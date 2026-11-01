@@ -1,0 +1,145 @@
+{
+  "name": "IP12 – HMI Data API (v0.1)",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "GET /ip12/latest",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "ip12-latest",
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "ip12/latest",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "2",
+      "name": "Query latest detections",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        240,
+        0
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, created_at, run_code, box_id, class, confidence, x, y, w, h, model_version\nFROM detections\nWHERE ($2 = 'all' OR run_code = $2)\nORDER BY id DESC\nLIMIT $1;",
+        "options": {
+          "queryReplacement": "={{ Math.min(Math.max(parseInt($json.query.limit) || 20, 1), 200) }},{{ ($json.query.run_code || 'all').replace(/,/g, '') }}"
+        }
+      }
+    },
+    {
+      "id": "3",
+      "name": "Return JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($input.all().map(i => i.json).filter(r => r.id)) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "4",
+      "name": "GET /ip12/hmi",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        220
+      ],
+      "webhookId": "ip12-hmi",
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "ip12/hmi",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "5",
+      "name": "Return live page",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        220
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>IP12 Live Detections</title>\n<style>\n  :root { --bg:#111418; --card:#1b2027; --text:#e8ecf1; --muted:#8a94a3; --ok:#3fb950; --warn:#f0883e; --line:#2a313b; }\n  * { box-sizing:border-box; }\n  body { margin:0; font:15px/1.4 system-ui, sans-serif; background:var(--bg); color:var(--text); padding:16px; }\n  h1 { font-size:20px; margin:0 0 4px; }\n  .sub { color:var(--muted); margin-bottom:16px; }\n  .stats { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; }\n  .stat { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:10px 14px; min-width:130px; }\n  .stat b { display:block; font-size:22px; }\n  .stat span { color:var(--muted); font-size:13px; }\n  table { width:100%; border-collapse:collapse; background:var(--card); border-radius:8px; overflow:hidden; }\n  th, td { padding:8px 10px; border-bottom:1px solid var(--line); text-align:left; }\n  th { color:var(--muted); font-weight:600; font-size:13px; }\n  td.num { font-variant-numeric:tabular-nums; }\n  .low td { color:var(--warn); }\n  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--ok); margin-right:6px; }\n  .dot.off { background:var(--warn); }\n  .wrap { overflow-x:auto; }\n</style>\n</head>\n<body>\n  <h1>IP12 · Live Detections</h1>\n  <div class=\"sub\"><span id=\"dot\" class=\"dot off\"></span><span id=\"status\">connecting…</span></div>\n  <div class=\"stats\">\n    <div class=\"stat\"><b id=\"s-count\">–</b><span>shown detections</span></div>\n    <div class=\"stat\"><b id=\"s-avg\">–</b><span>avg confidence</span></div>\n    <div class=\"stat\"><b id=\"s-low\">–</b><span>below 0.6</span></div>\n    <div class=\"stat\"><b id=\"s-model\">–</b><span>model version</span></div>\n  </div>\n  <div class=\"wrap\">\n    <table>\n      <thead><tr><th>Time</th><th>Run</th><th>Box</th><th>Class</th><th>Confidence</th><th>x, y, w, h</th></tr></thead>\n      <tbody id=\"rows\"></tbody>\n    </table>\n  </div>\n<script>\n  // Data comes from the n8n \"HMI Data API\" workflow.\n  const API = '/webhook/ip12/latest?limit=30';\n  const LOW = 0.6;\n  const $ = id => document.getElementById(id);\n  const esc = v => String(v ?? '–').replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));\n\n  async function refresh() {\n    try {\n      const res = await fetch(API, { cache: 'no-store' });\n      if (!res.ok) throw new Error('HTTP ' + res.status);\n      const data = await res.json();\n      const rows = Array.isArray(data) ? data : (data.data || []);\n      const conf = rows.map(r => Number(r.confidence));\n      $('s-count').textContent = rows.length;\n      $('s-avg').textContent = rows.length ? (conf.reduce((a, b) => a + b, 0) / rows.length).toFixed(2) : '–';\n      $('s-low').textContent = conf.filter(c => c < LOW).length;\n      $('s-model').textContent = rows[0]?.model_version ?? '–';\n      $('rows').innerHTML = rows.map(r => `\n        <tr class=\"${Number(r.confidence) < LOW ? 'low' : ''}\">\n          <td>${esc(new Date(r.created_at).toLocaleTimeString())}</td>\n          <td>${esc(r.run_code)}</td><td>${esc(r.box_id)}</td><td>${esc(r.class)}</td>\n          <td class=\"num\">${Number(r.confidence).toFixed(2)}</td>\n          <td class=\"num\">${[r.x, r.y, r.w, r.h].map(v => v == null ? '–' : Math.round(v)).join(', ')}</td>\n        </tr>`).join('');\n      $('dot').className = 'dot';\n      $('status').textContent = 'live · updated ' + new Date().toLocaleTimeString();\n    } catch (e) {\n      $('dot').className = 'dot off';\n      $('status').textContent = 'no connection to n8n (' + e.message + ')';\n    }\n  }\n  refresh();\n  setInterval(refresh, 2000);\n</script>\n</body>\n</html>\n",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "GET /ip12/latest": {
+      "main": [
+        [
+          {
+            "node": "Query latest detections",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query latest detections": {
+      "main": [
+        [
+          {
+            "node": "Return JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET /ip12/hmi": {
+      "main": [
+        [
+          {
+            "node": "Return live page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/Berlin",
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IP12 Live Detections</title>
+<style>
+  :root { --bg:#111418; --card:#1b2027; --text:#e8ecf1; --muted:#8a94a3; --ok:#3fb950; --warn:#f0883e; --line:#2a313b; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.4 system-ui, sans-serif; background:var(--bg); color:var(--text); padding:16px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .sub { color:var(--muted); margin-bottom:16px; }
+  .stats { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:10px 14px; min-width:130px; }
+  .stat b { display:block; font-size:22px; }
+  .stat span { color:var(--muted); font-size:13px; }
+  table { width:100%; border-collapse:collapse; background:var(--card); border-radius:8px; overflow:hidden; }
+  th, td { padding:8px 10px; border-bottom:1px solid var(--line); text-align:left; }
+  th { color:var(--muted); font-weight:600; font-size:13px; }
+  td.num { font-variant-numeric:tabular-nums; }
+  .low td { color:var(--warn); }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--ok); margin-right:6px; }
+  .dot.off { background:var(--warn); }
+  .wrap { overflow-x:auto; }
+</style>
+</head>
+<body>
+  <h1>IP12 · Live Detections</h1>
+  <div class="sub"><span id="dot" class="dot off"></span><span id="status">connecting…</span></div>
+  <div class="stats">
+    <div class="stat"><b id="s-count">–</b><span>shown detections</span></div>
+    <div class="stat"><b id="s-avg">–</b><span>avg confidence</span></div>
+    <div class="stat"><b id="s-low">–</b><span>below 0.6</span></div>
+    <div class="stat"><b id="s-model">–</b><span>model version</span></div>
+  </div>
+  <div class="wrap">
+    <table>
+      <thead><tr><th>Time</th><th>Run</th><th>Box</th><th>Class</th><th>Confidence</th><th>x, y, w, h</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+<script>
+  // Data comes from the n8n "HMI Data API" workflow.
+  const API = '/webhook/ip12/latest?limit=30';
+  const LOW = 0.6;
+  const $ = id => document.getElementById(id);
+  const esc = v => String(v ?? '–').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  async function refresh() {
+    try {
+      const res = await fetch(API, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const rows = Array.isArray(data) ? data : (data.data || []);
+      const conf = rows.map(r => Number(r.confidence));
+      $('s-count').textContent = rows.length;
+      $('s-avg').textContent = rows.length ? (conf.reduce((a, b) => a + b, 0) / rows.length).toFixed(2) : '–';
+      $('s-low').textContent = conf.filter(c => c < LOW).length;
+      $('s-model').textContent = rows[0]?.model_version ?? '–';
+      $('rows').innerHTML = rows.map(r => `
+        <tr class="${Number(r.confidence) < LOW ? 'low' : ''}">
+          <td>${esc(new Date(r.created_at).toLocaleTimeString())}</td>
+          <td>${esc(r.run_code)}</td><td>${esc(r.box_id)}</td><td>${esc(r.class)}</td>
+          <td class="num">${Number(r.confidence).toFixed(2)}</td>
+          <td class="num">${[r.x, r.y, r.w, r.h].map(v => v == null ? '–' : Math.round(v)).join(', ')}</td>
+        </tr>`).join('');
+      $('dot').className = 'dot';
+      $('status').textContent = 'live · updated ' + new Date().toLocaleTimeString();
+    } catch (e) {
+      $('dot').className = 'dot off';
+      $('status').textContent = 'no connection to n8n (' + e.message + ')';
+    }
+  }
+  refresh();
+  setInterval(refresh, 2000);
+</script>
+</body>
+</html>

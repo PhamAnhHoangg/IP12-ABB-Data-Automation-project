@@ -6,6 +6,7 @@ Two separate n8n workflows:
 |---|---|---|---|
 | **A · Weekly WP Commit** | `workflows/weekly-wp-commit.json` | Every Friday 17:00 | Google Sheet (Changelog + Snapshot), optional email |
 | **B · YOLO Ingest** | `workflows/yolo-ingest.json` | Webhook `POST /ip12/yolo` | Postgres table `detections` |
+| **C · HMI Data API** | `workflows/hmi-data-api.json` | `GET /ip12/latest`, `GET /ip12/hmi` | reads `detections` (read-only) |
 
 ```
 WP1 YOLO (Python) ──POST──▶ n8n webhook ──▶ validate ──▶ Postgres: detections
@@ -98,3 +99,13 @@ WP1 can copy `send_detections()` from `scripts/send_test_detection.py` into the 
 ## Connecting the real ZED + YOLO script
 
 Copy `scripts/n8n_reporter.py` next to the camera script. It sends detections in the background (batches every 2 s), so the camera loop is not slowed down. If n8n is offline, data is saved to `n8n_unsent.jsonl` and can be re-sent later. Usage is in the top of the file.
+
+## HMI Data API (workflow C)
+
+Import `workflows/hmi-data-api.json`, pick the same Postgres credential in **Query latest detections**, then **Publish**.
+
+- **JSON for the UX/HMI team:** `http://localhost:5678/webhook/ip12/latest?limit=20`
+  - `limit` 1–200 (default 20) · optional `run_code=run-001`
+  - newest first, fields: `id, created_at, run_code, box_id, class, confidence, x, y, w, h, model_version`
+- **Live demo page:** `http://localhost:5678/webhook/ip12/hmi` refreshes every 2 s, low-confidence rows in orange.
+  The page source is `hmi/live.html`; the UX/HMI team can restyle it from their Figma design.
