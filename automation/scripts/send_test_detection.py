@@ -11,6 +11,7 @@ WP1 can copy send_detections() into the real YOLO script later.
 import argparse
 import json
 import random
+import urllib.error
 import urllib.request
 
 TEST_URL = "http://localhost:5678/webhook-test/ip12/yolo"   # while "Listen for test event" is on
@@ -49,6 +50,19 @@ if __name__ == "__main__":
 
     url = args.url or (PROD_URL if args.prod else TEST_URL)
     dets = [fake_detection(i) for i in range(1, args.count + 1)]
-    status, body = send_detections(url, dets)
+    try:
+        status, body = send_detections(url, dets)
+    except urllib.error.HTTPError as e:
+        print(f"HTTP {e.code} from {url}")
+        print(e.read().decode()[:500])
+        if e.code == 404:
+            print("\nWebhook is not listening. Fix:")
+            print("  Test URL: click 'Execute workflow' in n8n first, then run this within 2 minutes.")
+            print("  Prod URL (--prod): the workflow must be published/active.")
+            print("  Or copy the URL from the YOLO Webhook node and pass it with --url")
+        raise SystemExit(1)
+    except urllib.error.URLError as e:
+        print(f"Cannot reach {url}: {e.reason}. Is n8n running? (docker compose ps)")
+        raise SystemExit(1)
     print(f"HTTP {status} from {url}")
     print(body[:1000])
