@@ -6,6 +6,7 @@ Two separate n8n workflows:
 |---|---|---|---|
 | **A · Weekly WP Commit** | `workflows/weekly-wp-commit.json` | Every Friday 17:00 | Google Sheet (Changelog + Snapshot), optional email |
 | **B · YOLO Ingest** | `workflows/yolo-ingest.json` | Webhook `POST /ip12/yolo` | Postgres table `detections` |
+| **D · System Map + Data Report** | `workflows/system-map-report.json` | Daily 18:00 / manual | `reports/ip12-report-YYYY-MM-DD.md` |
 | **C · HMI Data API** | `workflows/hmi-data-api.json` | `GET /ip12/latest`, `GET /ip12/hmi` | reads `detections` (read-only) |
 
 ```
@@ -109,3 +110,16 @@ Import `workflows/hmi-data-api.json`, pick the same Postgres credential in **Que
   - newest first, fields: `id, created_at, run_code, box_id, class, confidence, x, y, w, h, model_version`
 - **Live demo page:** `http://localhost:5678/webhook/ip12/hmi` refreshes every 2 s, low-confidence rows in orange.
   The page source is `hmi/live.html`; the UX/HMI team can restyle it from their Figma design.
+
+## System Map + Data Report (workflow D)
+
+One canvas, two lanes:
+- **Top lane, architecture view (not executed):** grey boxes that show how the Python/robot system works, grouped by work package. They have no trigger, so they never run; they are documentation for readers who don't read code.
+- **Bottom lane, LIVE:** reads `shared/detections.jsonl` (written by the Python code), builds a Markdown report (totals, avg confidence, by color / priority / model / run) and saves it to `reports/`.
+
+Setup:
+1. `git pull`, then `docker compose up -d` (the new `shared/` and `reports/` folders get mounted).
+2. Create demo data: `python scripts\file_logger.py`
+3. Import `workflows/system-map-report.json` → **Execute workflow** → open `reports\ip12-report-<today>.md`.
+
+In the real code, Louis adds: `from file_logger import log_detections` and calls `log_detections(objects, run_code, model_version)`.

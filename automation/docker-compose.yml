@@ -28,9 +28,12 @@ services:
       GENERIC_TIMEZONE: Europe/Berlin
       TZ: Europe/Berlin
       N8N_SECURE_COOKIE: "false"
+      N8N_RESTRICT_FILE_ACCESS_TO: /data
     volumes:
       - ./data/n8n:/home/node/.n8n
       - ./workflows:/workflows:ro
+      - ./shared:/data/shared          # Python writes detections.jsonl here
+      - ./reports:/data/reports        # n8n writes the Markdown reports here
     depends_on:
       postgres:
         condition: service_healthy

@@ -1,0 +1,458 @@
+{
+  "name": "IP12 – System Map + Data Report",
+  "nodes": [
+    {
+      "id": "s0",
+      "name": "Legend",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        -200
+      ],
+      "parameters": {
+        "content": "## 🗺️ IP12 System Map\n**Top lane = architecture view (NOT executed).** These grey boxes only show how the Python/robot code works, for readers who don't read code.\n\n**Bottom lane = LIVE.** It really runs: reads the data file the Python code writes and turns it into a report.",
+        "width": 360,
+        "height": 300,
+        "color": 1
+      }
+    },
+    {
+      "id": "s1",
+      "name": "WP1 · Camera & AI",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -20,
+        -200
+      ],
+      "parameters": {
+        "content": "### WP1 · Camera & AI\nZED-M camera + Ultralytics YOLO",
+        "width": 480,
+        "height": 300,
+        "color": 4
+      }
+    },
+    {
+      "id": "s2",
+      "name": "WP2 · Perception",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        480,
+        -200
+      ],
+      "parameters": {
+        "content": "### WP2 · Perception\nColor / QR → priority, 3D position",
+        "width": 240,
+        "height": 300,
+        "color": 5
+      }
+    },
+    {
+      "id": "s3",
+      "name": "WP4 · Rules & Planning",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        740,
+        -200
+      ],
+      "parameters": {
+        "content": "### WP4 · Rules & State machine\nPriority rules, pallet 3x3 / 4x4",
+        "width": 480,
+        "height": 300,
+        "color": 3
+      }
+    },
+    {
+      "id": "s4",
+      "name": "WP1 · Robot",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1240,
+        -200
+      ],
+      "parameters": {
+        "content": "### Robot\nABB arm executes",
+        "width": 240,
+        "height": 300,
+        "color": 4
+      }
+    },
+    {
+      "id": "s5",
+      "name": "HMI · UX",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        -200
+      ],
+      "parameters": {
+        "content": "### UX / HMI\nShows status to operator",
+        "width": 240,
+        "height": 300,
+        "color": 6
+      }
+    },
+    {
+      "id": "n0",
+      "name": "1 · ZED-M camera",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "notes": "stereo image + depth",
+      "notesInFlow": true,
+      "parameters": {}
+    },
+    {
+      "id": "n1",
+      "name": "2 · YOLO detection",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        240,
+        0
+      ],
+      "notes": "finds boxes, confidence",
+      "notesInFlow": true,
+      "parameters": {}
+    },
+    {
+      "id": "n2",
+      "name": "3 · Color / QR → priority",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        540,
+        0
+      ],
+      "notes": "red=1, QR=urgent…",
+      "notesInFlow": true,
+      "parameters": {}
+    },
+    {
+      "id": "n3",
+      "name": "4 · Rules (WP4)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        800,
+        0
+      ],
+      "notes": "which box first",
+      "notesInFlow": true,
+      "parameters": {}
+    },
+    {
+      "id": "n4",
+      "name": "5 · State machine",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        0
+      ],
+      "notes": "IDLE→DETECT→PICK→PLACE",
+      "notesInFlow": true,
+      "parameters": {}
+    },
+    {
+      "id": "n5",
+      "name": "6 · ABB robot",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1300,
+        0
+      ],
+      "notes": "pick & place",
+      "notesInFlow": true,
+      "parameters": {}
+    },
+    {
+      "id": "n6",
+      "name": "7 · HMI screen",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        0
+      ],
+      "notes": "FastAPI /detect",
+      "notesInFlow": true,
+      "parameters": {}
+    },
+    {
+      "id": "n20",
+      "name": "8 · Python saves data",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        180
+      ],
+      "notes": "appends to shared/detections.jsonl",
+      "notesInFlow": true,
+      "parameters": {}
+    },
+    {
+      "id": "s9",
+      "name": "LIVE lane",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        340
+      ],
+      "parameters": {
+        "content": "## ✅ LIVE: data → documentation\nRuns daily 18:00 (or click *Execute workflow*). Output: `reports/ip12-report-YYYY-MM-DD.md`",
+        "width": 2160,
+        "height": 330,
+        "color": 7
+      }
+    },
+    {
+      "id": "l1",
+      "name": "Every day 18:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        480
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 18
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "l2",
+      "name": "Read data file",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        240,
+        480
+      ],
+      "parameters": {
+        "fileSelector": "/data/shared/detections.jsonl",
+        "options": {}
+      }
+    },
+    {
+      "id": "l3",
+      "name": "File → text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        480,
+        480
+      ],
+      "parameters": {
+        "operation": "text",
+        "options": {}
+      }
+    },
+    {
+      "id": "l4",
+      "name": "Build report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        480
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Turn the JSONL data file (written by the Python code) into a Markdown report.\nconst text = $input.first().json.data || '';\nconst rows = [];\nlet bad = 0;\nfor (const line of text.split(/\\r?\\n/)) {\n  if (!line.trim()) continue;\n  try {\n    const o = JSON.parse(line);\n    // accept single objects or batches {detections:[...]}\n    if (Array.isArray(o.detections)) for (const d of o.detections) rows.push({ run_code: o.run_code, model_version: o.model_version, timestamp: o.timestamp, ...d });\n    else rows.push(o);\n  } catch (e) { bad++; }\n}\n\nconst LOW = 0.6;\nconst n = rows.length;\nconst conf = rows.map(r => Number(r.confidence)).filter(c => !isNaN(c));\nconst avg = conf.length ? conf.reduce((a, b) => a + b, 0) / conf.length : 0;\nconst low = conf.filter(c => c < LOW).length;\nconst countBy = key => {\n  const m = {};\n  for (const r of rows) { const k = r[key] ?? '—'; m[k] = (m[k] || 0) + 1; }\n  return Object.entries(m).sort((a, b) => b[1] - a[1]);\n};\nconst table = (title, pairs) => pairs.length\n  ? `### ${title}\\n\\n| ${title} | Count | Share |\\n|---|---:|---:|\\n` +\n    pairs.map(([k, v]) => `| ${k} | ${v} | ${n ? Math.round(v / n * 100) : 0}% |`).join('\\n') + '\\n'\n  : '';\nconst times = rows.map(r => r.timestamp).filter(Boolean).sort();\nconst now = $now.setZone('Europe/Berlin');\n\nlet md = `# IP12 Data Report\\n\\nGenerated ${now.toFormat('dd.LL.yyyy HH:mm')} by n8n from \\`shared/detections.jsonl\\`.\\n\\n`;\nmd += `## Summary\\n\\n| Metric | Value |\\n|---|---:|\\n`;\nmd += `| Detections | ${n} |\\n| Test runs | ${countBy('run_code').length} |\\n`;\nmd += `| Average confidence | ${conf.length ? avg.toFixed(2) : '—'} |\\n`;\nmd += `| Low confidence (< ${LOW}) | ${low} (${n ? Math.round(low / n * 100) : 0}%) |\\n`;\nif (times.length) md += `| First / last record | ${times[0]} / ${times[times.length - 1]} |\\n`;\nif (bad) md += `| Unreadable lines skipped | ${bad} |\\n`;\nmd += '\\n' + table('Color', countBy('color')) + '\\n' + table('Class', countBy('class')) + '\\n' +\n      table('Priority', countBy('priority')) + '\\n' + table('Model version', countBy('model_version')) + '\\n' +\n      table('Run', countBy('run_code'));\n\nreturn [{ json: { md, detections: n, avg_confidence: Number(avg.toFixed(3)), low_confidence: low, file_name: `ip12-report-${now.toFormat('yyyy-LL-dd')}.md` } }];\n"
+      }
+    },
+    {
+      "id": "l5",
+      "name": "Report → file",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        480
+      ],
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "md",
+        "options": {
+          "fileName": "={{ $json.file_name }}"
+        }
+      }
+    },
+    {
+      "id": "l6",
+      "name": "Save report",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        480
+      ],
+      "parameters": {
+        "operation": "write",
+        "fileName": "=/data/reports/{{ $('Build report').item.json.file_name }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "1 · ZED-M camera": {
+      "main": [
+        [
+          {
+            "node": "2 · YOLO detection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2 · YOLO detection": {
+      "main": [
+        [
+          {
+            "node": "3 · Color / QR → priority",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3 · Color / QR → priority": {
+      "main": [
+        [
+          {
+            "node": "4 · Rules (WP4)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4 · Rules (WP4)": {
+      "main": [
+        [
+          {
+            "node": "5 · State machine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5 · State machine": {
+      "main": [
+        [
+          {
+            "node": "6 · ABB robot",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "8 · Python saves data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6 · ABB robot": {
+      "main": [
+        [
+          {
+            "node": "7 · HMI screen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every day 18:00": {
+      "main": [
+        [
+          {
+            "node": "Read data file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read data file": {
+      "main": [
+        [
+          {
+            "node": "File → text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "File → text": {
+      "main": [
+        [
+          {
+            "node": "Build report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build report": {
+      "main": [
+        [
+          {
+            "node": "Report → file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report → file": {
+      "main": [
+        [
+          {
+            "node": "Save report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "8 · Python saves data": {
+      "main": [
+        [
+          {
+            "node": "Read data file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/Berlin",
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
