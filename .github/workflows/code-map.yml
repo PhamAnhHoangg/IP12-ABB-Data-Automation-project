@@ -1,0 +1,26 @@
+name: Update CODE_MAP.md
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["CODE_MAP.md"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  code-map:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python automation/scripts/code_map.py --base-url "https://github.com/${{ github.repository }}/blob/main"
+      - name: Commit if changed
+        run: |
+          if ! git diff --quiet -- CODE_MAP.md || [ -n "$(git ls-files --others -- CODE_MAP.md)" ]; then
+            git config user.name "code-map-bot"
+            git config user.email "actions@users.noreply.github.com"
+            git add CODE_MAP.md
+            git commit -m "Update CODE_MAP.md [skip ci]"
+            git push
+          fi

@@ -123,3 +123,17 @@ Setup:
 3. Import `workflows/system-map-report.json` → **Execute workflow** → open `reports\ip12-report-<today>.md`.
 
 In the real code, Louis adds: `from file_logger import log_detections` and calls `log_detections(objects, run_code, model_version)`.
+
+## Code map (file + line for each system step)
+
+The system map boxes show a tag such as `@ip12:state_machine`. Coders add that tag as a comment where the job is done:
+
+```python
+# @ip12:state_machine  main loop of the robot
+def run_state_machine(): ...
+```
+
+- The same tag can be in several files (spread code); all places are listed.
+- `.github/workflows/code-map.yml` runs `automation/scripts/code_map.py` on every push and updates **`CODE_MAP.md`** with clickable `file#line` links, so line numbers never go stale.
+- Tags: `camera, yolo, color_qr, rules, state_machine, robot, hmi_api, save_data` (other tags are listed too).
+- If the team code lives in another repo, copy `code_map.py` and `code-map.yml` there.

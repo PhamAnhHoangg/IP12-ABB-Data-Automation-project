@@ -24,6 +24,7 @@ def _to_dict(o):
     return dict(o)
 
 
+# @ip12:save_data  append one record to shared/detections.jsonl
 def log_detections(objects, run_code, model_version, path=DEFAULT_FILE):
     record = {
         "timestamp": datetime.now().isoformat(timespec="seconds"),

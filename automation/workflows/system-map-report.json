@@ -106,7 +106,7 @@
         0,
         0
       ],
-      "notes": "stereo image + depth\n📁 TODO: camera/zed_capture.py",
+      "notes": "stereo image + depth\n🏷 @ip12:camera",
       "notesInFlow": true,
       "parameters": {}
     },
@@ -119,7 +119,7 @@
         240,
         0
       ],
-      "notes": "finds boxes, confidence\n📁 TODO: vision/detect.py",
+      "notes": "finds boxes, confidence\n🏷 @ip12:yolo",
       "notesInFlow": true,
       "parameters": {}
     },
@@ -132,7 +132,7 @@
         540,
         0
       ],
-      "notes": "red=1, QR=urgent…\n📁 TODO: vision/color_qr.py",
+      "notes": "red=1, QR=urgent…\n🏷 @ip12:color_qr",
       "notesInFlow": true,
       "parameters": {}
     },
@@ -145,7 +145,7 @@
         800,
         0
       ],
-      "notes": "which box first\n📁 TODO: planning/rules.yaml",
+      "notes": "which box first\n🏷 @ip12:rules",
       "notesInFlow": true,
       "parameters": {}
     },
@@ -158,7 +158,7 @@
         1040,
         0
       ],
-      "notes": "IDLE→DETECT→PICK→PLACE\n📁 TODO: planning/state_machine.py",
+      "notes": "IDLE→DETECT→PICK→PLACE\n🏷 @ip12:state_machine",
       "notesInFlow": true,
       "parameters": {}
     },
@@ -171,7 +171,7 @@
         1300,
         0
       ],
-      "notes": "pick & place\n📁 TODO: robot/abb_control.py",
+      "notes": "pick & place\n🏷 @ip12:robot",
       "notesInFlow": true,
       "parameters": {}
     },
@@ -184,7 +184,7 @@
         1560,
         0
       ],
-      "notes": "FastAPI /detect\n📁 TODO: api/main.py",
+      "notes": "FastAPI /detect\n🏷 @ip12:hmi_api",
       "notesInFlow": true,
       "parameters": {}
     },
@@ -197,7 +197,7 @@
         1040,
         180
       ],
-      "notes": "appends to shared/detections.jsonl\n📁 automation/scripts/file_logger.py",
+      "notes": "appends to shared/detections.jsonl\n🏷 @ip12:save_data",
       "notesInFlow": true,
       "parameters": {}
     },
@@ -321,9 +321,9 @@
       ],
       "parameters": {
         "width": 620,
-        "height": 520,
+        "height": 360,
         "color": 2,
-        "content": "## 📁 Where is the code?\nEach box above shows its file under 📁. Click a link to open the code on GitHub.\n\n| Box | Code |\n|---|---|\n| ZED-M camera | `camera/zed_capture.py` *(todo)* |\n| YOLO detection | `vision/detect.py` *(todo)* |\n| Color / QR → priority | `vision/color_qr.py` *(todo)* |\n| Rules (WP4) | `planning/rules.yaml` *(todo)* |\n| State machine | `planning/state_machine.py` *(todo)* |\n| ABB robot | `robot/abb_control.py` *(todo)* |\n| HMI screen | `api/main.py` *(todo)* |\n| Python saves data | [automation/scripts/file_logger.py](https://github.com/PhamAnhHoangg/IP12-ABB-Data-Automation-project/blob/main/automation/scripts/file_logger.py) |\n\n*(todo) = file not in the repo yet. Update the path in the box note and here when it is.*"
+        "content": "## 📁 Where is the code?\n### 👉 [Open CODE_MAP.md](https://github.com/PhamAnhHoangg/IP12-ABB-Data-Automation-project/blob/main/CODE_MAP.md)\nExact **file + line** for every box, also when one job is spread over several files.\n\n**How it stays correct:** each box shows a tag (🏷 `@ip12:yolo`…). Coders put that tag as a comment where the job is done:\n`# @ip12:yolo  run YOLO on the frame`\n\nOn every push to GitHub, the line numbers are recalculated automatically."
       }
     }
   ],

@@ -34,6 +34,7 @@ import urllib.error
 import urllib.request
 
 
+# @ip12:save_data  background sender to the n8n webhook
 class N8nReporter:
     def __init__(self, url, run_code, model_version,
                  flush_every=2.0, max_batch=200,
