@@ -10,6 +10,7 @@ Tag code with `# @ip12:<tag>` and this table updates on every push.
 | 3 · Color / QR → priority | `@ip12:color_qr` | *not tagged yet* | |
 | 4 · Rules (WP4) | `@ip12:rules` | *not tagged yet* | |
 | 5 · State machine | `@ip12:state_machine` | [automation/README.md#L132](https://github.com/PhamAnhHoangg/IP12-ABB-Data-Automation-project/blob/main/automation/README.md#L132) | main loop of the robot |
+|  |  | [planning/state_machine_reference.py#L48](https://github.com/PhamAnhHoangg/IP12-ABB-Data-Automation-project/blob/main/planning/state_machine_reference.py#L48) | reference palletising state machine (simulation) |
 | 6 · ABB robot | `@ip12:robot` | *not tagged yet* | |
 | 7 · HMI screen / API | `@ip12:hmi_api` | *not tagged yet* | |
 | 8 · Python saves data | `@ip12:save_data` | [automation/scripts/file_logger.py#L27](https://github.com/PhamAnhHoangg/IP12-ABB-Data-Automation-project/blob/main/automation/scripts/file_logger.py#L27) | append one record to shared/detections.jsonl |
