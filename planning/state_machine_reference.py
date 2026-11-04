@@ -45,6 +45,7 @@ class World:
     slots: list = field(default_factory=lambda: [f"{r}{c}" for r in GRID_ROWS for c in range(1, GRID_COLS + 1)])
 
 
+# @ip12:state_machine  reference palletising state machine (simulation)
 class Palletiser:
     def __init__(self, world, log=print):
         self.w, self.log = world, log
